@@ -2,6 +2,9 @@ function validateUrl(input){
 	if (!input){
 		return {valid: false, error: "No URL provided"};
 	}
+	if (input.length > 2000) {
+	return { valid: false, error: "URL too long" };
+	}
 	try{
 		const url = new URL(input);
 		if (!["http:","https:"].includes(url.protocol)){
@@ -79,26 +82,47 @@ async function extractPageContent(response){
   return data;
 }
 
+function buildContext(extracted, url){
+	const parts =[];
+	parts.push(`Company URL: ${url}`);
+	if (extracted.title){
+		parts.push(`Page title: ${extracted.title}`);
+	}
+	const description = extracted.ogDescription || extracted.description;
+	if(description){
+		parts.push(`Company description: ${description}`);
+	}
+	if (extracted.headings?.length > 0){
+		const nonDuplicateHeadings = [...new Set(extracted.headings)].slice(0, 8);
+		parts.push(`Page headings: ${nonDuplicateHeadings.join(" | ")}`);
+	}
+	if (extracted.jsonLd?.description) {
+    parts.push(`Structured data: ${extracted.jsonLd.description}`);
+    }
+	const result = parts.join("\n");
+	return result.replace(/\s+/g, " ").trim().slice(0, 3000)
+}
+
 
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
         const companyUrl = url.searchParams.get("url");
-
         const validation = validateUrl(companyUrl);
         if (!validation.valid) {
            return new Response(JSON.stringify({ error: validation.error}),{ status:400, headers:{"Content-Type": "application/json" }}); 
         }
-
+		const targetUrl = validation.url.href;
         let pageResponse;
 		try{
-			pageResponse = await fetchWithTimeout(validation.url.href);
+			pageResponse = await fetchWithTimeout(targetUrl);
 		}catch{
 			return new Response(JSON.stringify({status: 502}));
 		}
 
-		const pageConstant = await extractPageContent(pageResponse);
-		return new Response(JSON.stringify(pageConstant), {status: 200,headers: { "Content-Type": "application/json" }});
-
+		const pageContent = await extractPageContent(pageResponse);
+		//return new Response(JSON.stringify(pageContent), {status: 200,headers: { "Content-Type": "application/json" }});
+		const cleanContext = buildContext(pageContent, targetUrl);
+		return new Response(JSON.stringify(cleanContext), {status: 200,headers: { "Content-Type": "application/json" }})
     }
 };
