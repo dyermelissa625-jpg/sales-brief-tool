@@ -28,6 +28,58 @@ async function fetchWithTimeout(url, timeoutMS=5000){
   }
 	}
 
+async function extractPageContent(response){
+	const data = {
+		title: "",
+		description: "",
+		ogTitle: "",
+		ogDescription: "",
+		headings: [],
+		jsonLd: null
+    };
+	  const rewriter = new HTMLRewriter()
+    .on("title", {
+      text(chunk) {
+        data.title += chunk.text;
+      }
+    })
+    .on("meta[name='description']", {
+      element(el) {
+        data.description = el.getAttribute("content") || "";
+      }
+    })
+    .on("meta[property='og:description']", {
+      element(el) {
+        data.ogDescription = el.getAttribute("content") || "";
+      }
+    })
+    .on("h1, h2", {
+      text(chunk) {
+        if (chunk.text.trim()) {
+          data.headings.push(chunk.text.trim());
+        }
+      }
+    })
+    .on("script[type='application/ld+json']", {
+      text(chunk) {
+        data.jsonLd = (data.jsonLd || "") + chunk.text;
+      }
+    });
+
+  await rewriter.transform(response).text();
+
+  if (data.jsonLd) {
+    try {
+      data.jsonLd = JSON.parse(data.jsonLd);
+    } catch {
+      data.jsonLd = null; 
+    }
+  }
+
+  return data;
+}
+
+
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
@@ -44,6 +96,9 @@ export default {
 		}catch{
 			return new Response(JSON.stringify({status: 502}));
 		}
-		return new Response(JSON.stringify({ message: "Page fetched successfully"}), {status: pageResponse.status,headers:{"Content-Type": "application/json" } });
+
+		const pageConstant = await extractPageContent(pageResponse);
+		return new Response(JSON.stringify(pageConstant), {status: 200,headers: { "Content-Type": "application/json" }});
+
     }
 };
