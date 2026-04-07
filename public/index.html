@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Brief Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <div class="logo">Brief<span>AI</span></div>
+      <p class="tagline">AI-powered sales intelligence. Enter a company URL and your product to generate a full sales brief in seconds.</p>
+      <div class="field">
+        <label class="field-label">Target Company URL</label>
+        <input type="text" id="urlInput" class="field-input" placeholder="https://stripe.com">
+      </div>
+      <div class="field">
+        <label class="field-label">Your Product</label>
+        <textarea id="productInput" class="field-textarea" placeholder="Describe what you sell in a sentence or two..."></textarea>
+      </div>
+      <button id="generateBtn" class="btn">Generate Brief →</button>
+      <div id="errorMsg" class="error-msg"></div>
+    </div>
+    <div class="main">
+      <div id="emptyState" class="empty-state">
+        <div class="empty-icon">//</div>
+        <p>Your sales brief will appear here.</p>
+        <p class="empty-sub">Enter a URL and your product on the left to get started.</p>
+      </div>
+      <div id="loadingState" class="loading-state hidden">
+        <div class="spinner"></div>
+        <p>Analysing company and generating brief...</p>
+      </div>
+      <div id="briefOutput" class="brief-output hidden">
+        <div class="brief-header">
+          <span class="brief-label">// Sales Brief</span>
+          <span id="companyName" class="brief-company"></span>
+        </div>
+        <div id="briefContent" class="brief-content"></div>
+      </div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
