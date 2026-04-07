@@ -103,6 +103,26 @@ function buildContext(extracted, url){
 	return result.replace(/\s+/g, " ").trim().slice(0, 3000)
 }
 
+async function generateBrief(context, env) {
+  const response = await env.AI.run(
+    "@cf/meta/llama-3.1-8b-instruct",
+    {
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert B2B sales researcher. Generate a concise sales brief based on the provided company information."
+        },
+        {
+          role: "user",
+          content: `Generate a sales brief for this company:\n\n${context}`
+        }
+      ]
+    }
+  );
+
+  return response.response;
+}
+
 
 export default {
     async fetch(request, env, ctx) {
@@ -123,6 +143,8 @@ export default {
 		const pageContent = await extractPageContent(pageResponse);
 		//return new Response(JSON.stringify(pageContent), {status: 200,headers: { "Content-Type": "application/json" }});
 		const cleanContext = buildContext(pageContent, targetUrl);
-		return new Response(JSON.stringify(cleanContext), {status: 200,headers: { "Content-Type": "application/json" }})
-    }
+		//return new Response(JSON.stringify(cleanContext), {status: 200,headers: { "Content-Type": "application/json" }})
+		const brief = await generateBrief(cleanContext, env);
+		return new Response(JSON.stringify({ brief }), {status: 200, headers: { "Content-Type": "application/json" }});
+	}
 };
