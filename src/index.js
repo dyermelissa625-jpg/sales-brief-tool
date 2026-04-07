@@ -137,23 +137,32 @@ async function generateBrief(context, env, product) {
 
 export default {
     async fetch(request, env, ctx) {
+		if (request.method === "OPTIONS") {
+		return new Response(null, {
+			headers: {
+				"Access-Control-Allow-Origin": "*",
+				"Access-Control-Allow-Methods": "GET, POST",
+				"Access-Control-Allow-Headers": "Content-Type"
+			}
+		});
+}
         const url = new URL(request.url);
         const companyUrl = url.searchParams.get("url");
         const validation = validateUrl(companyUrl);
         if (!validation.valid) {
-           return new Response(JSON.stringify({ error: validation.error}),{ status:400, headers:{"Content-Type": "application/json" }}); 
+           return new Response(JSON.stringify({ error: validation.error}),{ status:400, headers:{"Content-Type": "application/json","Access-Control-Allow-Origin": "*" }}); 
         }
 		const targetUrl = validation.url.href;
 		const ourProduct = url.searchParams.get("product")
 		if (!ourProduct) {
     		return new Response(JSON.stringify({ error: "No product description provided" }), {status: 400,
-        headers: { "Content-Type": "application/json" }});
+        headers: { "Content-Type": "application/json","Access-Control-Allow-Origin": "*" }});
 		}
         let pageResponse;
 		try{
 			pageResponse = await fetchWithTimeout(targetUrl);
 		}catch{
-			return new Response(JSON.stringify({status: 502}));
+			return new Response(JSON.stringify({status: 502}), {status: 502, headers:{"Content-Type": "application/json","Access-Control-Allow-Origin": "*"}});
 		}
 
 		const pageContent = await extractPageContent(pageResponse);
@@ -161,6 +170,6 @@ export default {
 		const cleanContext = buildContext(pageContent, targetUrl);
 		//return new Response(JSON.stringify(cleanContext), {status: 200,headers: { "Content-Type": "application/json" }})
 		const brief = await generateBrief(cleanContext, env, ourProduct);
-		return new Response(JSON.stringify({ brief }), {status: 200, headers: { "Content-Type": "application/json" }});
+		return new Response(JSON.stringify({ brief }), {status: 200, headers: { "Content-Type": "application/json","Access-Control-Allow-Origin": "*" }});
 	}
 };
