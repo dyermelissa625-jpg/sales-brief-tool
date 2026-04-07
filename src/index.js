@@ -103,20 +103,31 @@ function buildContext(extracted, url){
 	return result.replace(/\s+/g, " ").trim().slice(0, 3000)
 }
 
-async function generateBrief(context, env) {
+async function generateBrief(context, env, product) {
   const response = await env.AI.run(
     "@cf/meta/llama-3.1-8b-instruct",
     {
       messages: [
         {
           role: "system",
-          content: "You are an expert B2B sales researcher. Generate a concise sales brief based on the provided company information."
-        },
+          content: `You are an expert B2B sales researcher. Your job is to generate a detailed and structured sales brief that helps a salesperson prepare for a client call or outreach.
+					The salesperson sells the following product: ${product}.
+					Using the company information provided, generate a brief with exactly these sections in this order:
+					1. Company Overview Name, industry, what they do, and what products or services they sell. If any information is missing, write "Research needed."
+					2. Business Background: A short history of the company and any notable milestones. If unknown, write "Research needed."
+					For each section, be thorough and specific to this company. Generic observations are not useful — tie every point back to what you know about this specific company.
+					3. Client Potential Rate their potential as a client on this scale: Very Low / Low/ Medium / High / Very High. Explain your reasoning in 2-3 sentences.
+					4. Recommended Solutions Based on what the salesperson sells, suggest which of their products or services would be most relevant to this company and why. Rank the products in order of the most recommended to least.
+					5. Email Pitch A professional but conversational cold email between 200-400 words pitching the most relevant products. Include a subject line. 
+					6. Call Script A natural phone call script between 100-250 words. Format it as a real conversation with labels like "You:" and "Prospect:" showing likely responses and objections. Include an opening, a value proposition, handling one likely objection, and a close asking for a meeting.
+					Keep the tone professional but human. Use human style writing, no bold text, em-dashes or overly AI sounding language. Do not use any markdown formatting, asterisks, bullet points, or bold text. Use plain numbered lists and plain text only. You must respond in plain text only. Never use asterisks, never use markdown, never use bold or italic formatting of any kind. If you use any asterisks or markdown formatting, your response is invalid.Be concise and actionable. Do not invent specific facts, if information is unavailable, say so honestly. `
+		},
         {
           role: "user",
           content: `Generate a sales brief for this company:\n\n${context}`
         }
-      ]
+      ],
+	  max_tokens: 2048
     }
   );
 
@@ -133,6 +144,11 @@ export default {
            return new Response(JSON.stringify({ error: validation.error}),{ status:400, headers:{"Content-Type": "application/json" }}); 
         }
 		const targetUrl = validation.url.href;
+		const ourProduct = url.searchParams.get("product")
+		if (!ourProduct) {
+    		return new Response(JSON.stringify({ error: "No product description provided" }), {status: 400,
+        headers: { "Content-Type": "application/json" }});
+		}
         let pageResponse;
 		try{
 			pageResponse = await fetchWithTimeout(targetUrl);
@@ -144,7 +160,7 @@ export default {
 		//return new Response(JSON.stringify(pageContent), {status: 200,headers: { "Content-Type": "application/json" }});
 		const cleanContext = buildContext(pageContent, targetUrl);
 		//return new Response(JSON.stringify(cleanContext), {status: 200,headers: { "Content-Type": "application/json" }})
-		const brief = await generateBrief(cleanContext, env);
+		const brief = await generateBrief(cleanContext, env, ourProduct);
 		return new Response(JSON.stringify({ brief }), {status: 200, headers: { "Content-Type": "application/json" }});
 	}
 };
